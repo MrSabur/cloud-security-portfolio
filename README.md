@@ -11,7 +11,7 @@ Multi-account architecture with Transit Gateway networking, IAM permission bound
 Five-pillar zero-trust implementation using AWS-native controls: identity, device, network, application, and data security layers.
 
 ## Author
-**Afolabi Ajao** — Cloud Security Architect  
+**Sabur Ajao** — Cloud Security Architect  
 [LinkedIn](https://linkedin.com/in/afolabisaburajao) | CISSP | CCSP | AWS Solutions Architect
 
 ## Tech Stack
