@@ -14,8 +14,7 @@ terraform {
     }
   }
 
-  # Remote state configuration
-  # In production, uncomment this to store state in S3
+  # Remote state - uncomment when S3 backend is ready
   # backend "s3" {
   #   bucket         = "medflow-terraform-state"
   #   key            = "workloads-prod/terraform.tfstate"
@@ -38,13 +37,28 @@ provider "aws" {
       Project     = "medflow"
       ManagedBy   = "terraform"
       CostCenter  = "engineering"
+      Compliance  = "hipaa"
     }
   }
 }
 
 # ------------------------------------------------------------------------------
-# VPC
-# Production VPC with high availability (multi-AZ NAT)
+# DATA SOURCES
+# In production, these would reference the actual Transit Gateway via RAM share
+# For now, we use variables to demonstrate the pattern
+# ------------------------------------------------------------------------------
+
+# When Transit Gateway is shared via RAM, uncomment:
+# data "aws_ec2_transit_gateway" "main" {
+#   filter {
+#     name   = "owner-id"
+#     values = [var.shared_services_account_id]
+#   }
+# }
+
+# ------------------------------------------------------------------------------
+# PRODUCTION VPC
+# High availability configuration with multi-AZ NAT
 # ------------------------------------------------------------------------------
 
 module "vpc" {
@@ -54,28 +68,60 @@ module "vpc" {
   cidr_block  = "10.20.0.0/16"
   environment = "production"
 
-  # Production settings: HA NAT Gateway (one per AZ)
+  # Production: Multi-AZ NAT for high availability
+  # Note: If using centralized NAT in shared-services, set this to false
   enable_nat_gateway = true
-  single_nat_gateway = false  # One NAT per AZ for high availability
+  single_nat_gateway = false
 
-  # HIPAA requirement: retain flow logs
+  # HIPAA requirement: full logging
   enable_flow_logs        = true
   flow_log_retention_days = 365
 
   tags = {
-    DataClassification = "phi"  # Contains Protected Health Information
-    Compliance         = "hipaa"
+    DataClassification = "phi"
   }
 }
 
 # ------------------------------------------------------------------------------
+# TRANSIT GATEWAY ATTACHMENT
+# Connects prod VPC to the central Transit Gateway
+# Uncomment when Transit Gateway is available via RAM share
+# ------------------------------------------------------------------------------
+
+# module "tgw_attachment" {
+#   source = "../../modules/tgw-attachment"
+#
+#   name                           = "prod"
+#   vpc_id                         = module.vpc.vpc_id
+#   subnet_ids                     = module.vpc.private_subnet_ids
+#   transit_gateway_id             = var.transit_gateway_id
+#   transit_gateway_route_table_id = var.transit_gateway_prod_route_table_id
+#
+#   vpc_route_table_ids = concat(
+#     module.vpc.private_route_table_ids,
+#     [module.vpc.data_route_table_id]
+#   )
+#
+#   # Routes to other VPCs via Transit Gateway
+#   destination_cidr_blocks = [
+#     "10.0.0.0/16",   # Security VPC
+#     "10.1.0.0/16",   # Shared Services VPC
+#   ]
+#   # Note: No route to 10.10.0.0/16 (Dev) - isolation enforced
+# }
+
+# ------------------------------------------------------------------------------
 # OUTPUTS
-# Values needed by other configurations and for reference
 # ------------------------------------------------------------------------------
 
 output "vpc_id" {
   description = "Production VPC ID"
   value       = module.vpc.vpc_id
+}
+
+output "vpc_cidr_block" {
+  description = "Production VPC CIDR block"
+  value       = module.vpc.vpc_cidr_block
 }
 
 output "private_subnet_ids" {
@@ -89,6 +135,6 @@ output "data_subnet_ids" {
 }
 
 output "nat_gateway_ips" {
-  description = "NAT Gateway public IPs (for whitelisting with external services)"
+  description = "NAT Gateway public IPs"
   value       = module.vpc.nat_gateway_public_ips
 }

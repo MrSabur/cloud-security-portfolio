@@ -402,3 +402,133 @@ module "security_baseline" {
 | §164.308(a)(8) Evaluation | AWS Config continuous compliance |
 | §164.312(a)(1) Access controls | Config rules for IAM/MFA |
 | §164.312(e)(1) Transmission security | Config rules for encryption |
+
+# Cloud Security Portfolio
+
+Production-grade AWS architectures demonstrating enterprise security patterns for HIPAA-compliant healthcare environments.
+
+## 🏗️ Projects
+
+### AWS Landing Zone
+
+Multi-account architecture with Transit Gateway networking, IAM permission boundaries, and centralized security controls.
+
+**[View Landing Zone →](landing-zone/)**
+
+#### Architecture Overview
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           AWS ORGANIZATION                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
+│  │    SECURITY     │  │ SHARED SERVICES │  │         WORKLOADS          │ │
+│  │    ACCOUNT      │  │    ACCOUNT      │  │                            │ │
+│  │                 │  │                 │  │  ┌─────────┐ ┌─────────┐   │ │
+│  │ • CloudTrail    │  │ • Transit GW    │  │  │  PROD   │ │   DEV   │   │ │
+│  │ • GuardDuty     │  │ • NAT Gateway   │  │  │  VPC    │ │   VPC   │   │ │
+│  │ • Config        │  │ • DNS           │  │  │         │ │         │   │ │
+│  │ • Security Hub  │  │ • CI/CD         │  │  └─────────┘ └─────────┘   │ │
+│  │                 │  │                 │  │       │           │        │ │
+│  └────────┬────────┘  └────────┬────────┘  └───────┼───────────┼────────┘ │
+│           │                    │                   │           │          │
+│           └────────────────────┴───────────────────┴───────────┘          │
+│                                │                                          │
+│                    ┌───────────┴───────────┐                              │
+│                    │    TRANSIT GATEWAY    │                              │
+│                    │    (Network Hub)      │                              │
+│                    └───────────────────────┘                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Account Isolation** | Blast radius containment via AWS Organizations |
+| **Network Segmentation** | Transit Gateway with route table isolation (prod ↔ dev blocked) |
+| **Three-Tier VPCs** | Public, Private, Data subnets with defense in depth |
+| **HIPAA Compliance** | 7-year log retention, encryption at rest, audit controls |
+| **Security Baseline** | GuardDuty, Security Hub, AWS Config with compliance rules |
+
+#### Modules
+
+| Module | Purpose |
+|--------|---------|
+| [vpc](landing-zone/terraform/modules/vpc/) | Three-tier VPC with NAT, flow logs, VPC endpoints |
+| [transit-gateway](landing-zone/terraform/modules/transit-gateway/) | Hub-and-spoke networking with route table isolation |
+| [tgw-attachment](landing-zone/terraform/modules/tgw-attachment/) | VPC-to-TGW connectivity |
+| [security-baseline](landing-zone/terraform/modules/security-baseline/) | CloudTrail, GuardDuty, Config, Security Hub |
+
+#### Design Decisions
+
+- [ADR-001: Multi-Account Strategy](landing-zone/docs/decisions/001-multi-account-strategy.md)
+- [ADR-002: Network Topology](landing-zone/docs/decisions/002-network-topology.md)
+
+---
+
+## 🛡️ Compliance Mapping
+
+| Framework | Coverage |
+|-----------|----------|
+| **HIPAA Security Rule** | Access controls, audit controls, transmission security, encryption |
+| **NIST CSF** | PR.AC (Access Control), PR.DS (Data Security), DE.CM (Monitoring) |
+| **CIS AWS Benchmark** | Security Hub automated checks |
+
+---
+
+## 💰 Cost Estimate
+
+| Component | Monthly Cost |
+|-----------|--------------|
+| Transit Gateway (hub + 4 attachments) | ~$180 |
+| NAT Gateways (2 in shared services) | ~$64 |
+| VPC Flow Logs | ~$20 |
+| GuardDuty | ~$50 |
+| AWS Config | ~$30 |
+| Security Hub | ~$10 |
+| **Total** | **~$350/month** |
+
+*Estimate for small environment. Production costs vary with data transfer and resource count.*
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Terraform >= 1.5.0
+- AWS CLI configured
+- AWS Organizations set up
+
+### Deployment Order
+```bash
+# 1. Security Account (logging infrastructure)
+cd landing-zone/terraform/environments/security
+terraform init && terraform plan
+
+# 2. Shared Services (Transit Gateway hub)
+cd ../shared-services
+terraform init && terraform plan
+
+# 3. Workload Accounts (attach to TGW)
+cd ../workloads-prod
+terraform init && terraform plan
+```
+
+---
+
+## 👤 Author
+
+**Sabur Ajao** — Cloud Security Architect
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://linkedin.com/in/afolabisaburajao)
+
+**Credentials:** CISSP | CCSP | AWS Solutions Architect | ISO 27032 | MBA (Kellogg)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

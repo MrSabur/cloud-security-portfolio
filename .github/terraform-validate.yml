@@ -1,0 +1,60 @@
+name: Terraform Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing-zone/terraform/**'
+      - '.github/workflows/terraform-validate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'landing-zone/terraform/**'
+
+jobs:
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive landing-zone/terraform
+        continue-on-error: true
+
+      - name: Validate VPC Module
+        run: |
+          cd landing-zone/terraform/modules/vpc
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate Transit Gateway Module
+        run: |
+          cd landing-zone/terraform/modules/transit-gateway
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate TGW Attachment Module
+        run: |
+          cd landing-zone/terraform/modules/tgw-attachment
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate Security Baseline Module
+        run: |
+          cd landing-zone/terraform/modules/security-baseline
+          terraform init -backend=false
+          terraform validate
+
+      - name: Format Check Status
+        if: steps.fmt.outcome == 'failure'
+        run: |
+          echo "::warning::Terraform files are not properly formatted. Run 'terraform fmt -recursive' to fix."
