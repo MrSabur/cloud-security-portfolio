@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700">
+  <defs>
+    <style>
+      .account { fill: #f8f9fa; stroke: #dee2e6; stroke-width: 2; rx: 10; }
+      .account-security { fill: #fff3cd; }
+      .account-shared { fill: #d1ecf1; }
+      .account-prod { fill: #d4edda; }
+      .account-dev { fill: #f5c6cb; }
+      .vpc { fill: white; stroke: #6c757d; stroke-width: 1; stroke-dasharray: 5,5; rx: 5; }
+      .subnet-public { fill: #cce5ff; }
+      .subnet-private { fill: #e2e3e5; }
+      .subnet-data { fill: #f8d7da; }
+      .tgw { fill: #6f42c1; }
+      .service { fill: #007bff; }
+      .title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; }
+      .label { font-family: Arial, sans-serif; font-size: 11px; }
+      .small { font-family: Arial, sans-serif; font-size: 9px; fill: #6c757d; }
+      .arrow { stroke: #495057; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrow-dashed { stroke: #495057; stroke-width: 1; stroke-dasharray: 4,4; fill: none; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#495057"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="500" y="30" text-anchor="middle" class="title" style="font-size: 18px;">MedFlow Landing Zone Architecture</text>
+  <text x="500" y="50" text-anchor="middle" class="small">HIPAA-Compliant Multi-Account AWS Organization</text>
+  
+  <!-- Transit Gateway (Center) -->
+  <rect x="425" y="320" width="150" height="60" rx="10" class="tgw"/>
+  <text x="500" y="345" text-anchor="middle" fill="white" class="title">Transit Gateway</text>
+  <text x="500" y="365" text-anchor="middle" fill="white" class="small">Network Hub</text>
+  
+  <!-- Security Account (Top Left) -->
+  <rect x="20" y="70" width="280" height="200" class="account account-security"/>
+  <text x="160" y="95" text-anchor="middle" class="title">Security Account</text>
+  <text x="160" y="112" text-anchor="middle" class="small">10.0.0.0/16</text>
+  
+  <rect x="35" y="125" width="110" height="55" rx="5" class="service"/>
+  <text x="90" y="150" text-anchor="middle" fill="white" class="label">CloudTrail</text>
+  <text x="90" y="168" text-anchor="middle" fill="white" class="small">API Audit</text>
+  
+  <rect x="160" y="125" width="110" height="55" rx="5" class="service"/>
+  <text x="215" y="150" text-anchor="middle" fill="white" class="label">GuardDuty</text>
+  <text x="215" y="168" text-anchor="middle" fill="white" class="small">Threat Detection</text>
+  
+  <rect x="35" y="195" width="110" height="55" rx="5" class="service"/>
+  <text x="90" y="220" text-anchor="middle" fill="white" class="label">Config</text>
+  <text x="90" y="238" text-anchor="middle" fill="white" class="small">Compliance</text>
+  
+  <rect x="160" y="195" width="110" height="55" rx="5" class="service"/>
+  <text x="215" y="220" text-anchor="middle" fill="white" class="label">Security Hub</text>
+  <text x="215" y="238" text-anchor="middle" fill="white" class="small">Dashboard</text>
+  
+  <!-- Shared Services Account (Top Right) -->
+  <rect x="700" y="70" width="280" height="200" class="account account-shared"/>
+  <text x="840" y="95" text-anchor="middle" class="title">Shared Services</text>
+  <text x="840" y="112" text-anchor="middle" class="small">10.1.0.0/16</text>
+  
+  <rect x="720" y="130" width="240" height="120" class="vpc"/>
+  <text x="840" y="150" text-anchor="middle" class="label">Shared Services VPC</text>
+  
+  <rect x="740" y="165" width="90" height="45" rx="5" fill="#fd7e14"/>
+  <text x="785" y="185" text-anchor="middle" fill="white" class="label">NAT GW</text>
+  <text x="785" y="200" text-anchor="middle" fill="white" class="small">Egress</text>
+  
+  <rect x="850" y="165" width="90" height="45" rx="5" fill="#20c997"/>
+  <text x="895" y="185" text-anchor="middle" fill="white" class="label">Route 53</text>
+  <text x="895" y="200" text-anchor="middle" fill="white" class="small">DNS</text>
+  
+  <!-- Workloads-Prod Account (Bottom Left) -->
+  <rect x="20" y="430" width="400" height="250" class="account account-prod"/>
+  <text x="220" y="455" text-anchor="middle" class="title">Workloads-Prod Account</text>
+  <text x="220" y="472" text-anchor="middle" class="small">10.20.0.0/16 • HIPAA • PHI</text>
+  
+  <rect x="40" y="485" width="360" height="175" class="vpc"/>
+  <text x="220" y="505" text-anchor="middle" class="label">Production VPC</text>
+  
+  <rect x="55" y="520" width="100" height="40" rx="5" class="subnet-public"/>
+  <text x="105" y="538" text-anchor="middle" class="label">Public</text>
+  <text x="105" y="552" text-anchor="middle" class="small">ALB</text>
+  
+  <rect x="170" y="520" width="100" height="40" rx="5" class="subnet-private"/>
+  <text x="220" y="538" text-anchor="middle" class="label">Private</text>
+  <text x="220" y="552" text-anchor="middle" class="small">App Servers</text>
+  
+  <rect x="285" y="520" width="100" height="40" rx="5" class="subnet-data"/>
+  <text x="335" y="538" text-anchor="middle" class="label">Data</text>
+  <text x="335" y="552" text-anchor="middle" class="small">RDS (No Internet)</text>
+  
+  <text x="220" y="590" text-anchor="middle" class="small">Multi-AZ NAT • 365-day Flow Logs</text>
+  
+  <!-- Route Table Labels -->
+  <rect x="55" y="615" width="145" height="25" rx="3" fill="#28a745"/>
+  <text x="127" y="632" text-anchor="middle" fill="white" class="small">✓ → Security, Shared</text>
+  
+  <rect x="210" y="615" width="100" height="25" rx="3" fill="#dc3545"/>
+  <text x="260" y="632" text-anchor="middle" fill="white" class="small">✗ → Dev</text>
+  
+  <!-- Workloads-Dev Account (Bottom Right) -->
+  <rect x="580" y="430" width="400" height="250" class="account account-dev"/>
+  <text x="780" y="455" text-anchor="middle" class="title">Workloads-Dev Account</text>
+  <text x="780" y="472" text-anchor="middle" class="small">10.10.0.0/16 • Internal Only</text>
+  
+  <rect x="600" y="485" width="360" height="175" class="vpc"/>
+  <text x="780" y="505" text-anchor="middle" class="label">Development VPC</text>
+  
+  <rect x="615" y="520" width="100" height="40" rx="5" class="subnet-public"/>
+  <text x="665" y="538" text-anchor="middle" class="label">Public</text>
+  <text x="665" y="552" text-anchor="middle" class="small">ALB</text>
+  
+  <rect x="730" y="520" width="100" height="40" rx="5" class="subnet-private"/>
+  <text x="780" y="538" text-anchor="middle" class="label">Private</text>
+  <text x="780" y="552" text-anchor="middle" class="small">App Servers</text>
+  
+  <rect x="845" y="520" width="100" height="40" rx="5" class="subnet-data"/>
+  <text x="895" y="538" text-anchor="middle" class="label">Data</text>
+  <text x="895" y="552" text-anchor="middle" class="small">RDS (No Internet)</text>
+  
+  <text x="780" y="590" text-anchor="middle" class="small">Single NAT • 30-day Flow Logs</text>
+  
+  <!-- Route Table Labels -->
+  <rect x="615" y="615" width="145" height="25" rx="3" fill="#28a745"/>
+  <text x="687" y="632" text-anchor="middle" fill="white" class="small">✓ → Security, Shared</text>
+  
+  <rect x="770" y="615" width="100" height="25" rx="3" fill="#dc3545"/>
+  <text x="820" y="632" text-anchor="middle" fill="white" class="small">✗ → Prod</text>
+  
+  <!-- Connection Lines -->
+  <!-- TGW to Security -->
+  <path d="M 425 350 L 300 350 L 300 270" class="arrow"/>
+  <text x="310" y="310" class="small">Shared RT</text>
+  
+  <!-- TGW to Shared Services -->
+  <path d="M 575 350 L 700 350 L 700 270" class="arrow"/>
+  <text x="640" y="310" class="small">Shared RT</text>
+  
+  <!-- TGW to Prod -->
+  <path d="M 460 380 L 460 430 L 220 430 L 220 485" class="arrow"/>
+  <text x="340" y="420" class="small">Prod RT</text>
+  
+  <!-- TGW to Dev -->
+  <path d="M 540 380 L 540 430 L 780 430 L 780 485" class="arrow"/>
+  <text x="660" y="420" class="small">Dev RT</text>
+  
+  <!-- Egress flows (dashed) -->
+  <path d="M 220 520 L 220 400 L 785 400 L 785 210" class="arrow-dashed"/>
+  <path d="M 780 520 L 780 395 L 785 395 L 785 210" class="arrow-dashed"/>
+  <text x="500" y="390" class="small" fill="#6c757d">Centralized Egress via NAT</text>
+  
+  <!-- Legend -->
+  <rect x="20" y="10" width="15" height="15" class="subnet-public"/>
+  <text x="40" y="22" class="small">Public Subnet</text>
+  
+  <rect x="120" y="10" width="15" height="15" class="subnet-private"/>
+  <text x="140" y="22" class="small">Private Subnet</text>
+  
+  <rect x="230" y="10" width="15" height="15" class="subnet-data"/>
+  <text x="250" y="22" class="small">Data Subnet (Isolated)</text>
+  
+</svg>
