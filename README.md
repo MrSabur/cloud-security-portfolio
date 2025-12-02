@@ -127,3 +127,157 @@ module "vpc" {
 - PR.AC-5: Network segmentation via three-tier architecture
 - PR.DS-2: Data-in-transit protection via private subnets
 - DE.CM-1: Network monitoring via Flow Logs
+
+# Transit Gateway Module
+
+Creates a Transit Gateway hub with route table isolation for environment separation.
+
+## Architecture
+```
+                    ┌─────────────────────────────────────────┐
+                    │           TRANSIT GATEWAY               │
+                    │                                         │
+                    │  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+                    │  │ Prod RT │ │ Dev RT  │ │Shared RT│   │
+                    │  └─────────┘ └─────────┘ └─────────┘   │
+                    └─────────────────────────────────────────┘
+                           │            │            │
+          ┌────────────────┴────────────┴────────────┴────────┐
+          │                      │                            │
+          ▼                      ▼                            ▼
+     ┌─────────┐           ┌──────────┐                 ┌──────────┐
+     │Workloads│           │Workloads │                 │ Security │
+     │  Prod   │           │   Dev    │                 │ + Shared │
+     └─────────┘           └──────────┘                 └──────────┘
+```
+
+## Isolation Model
+
+| Source | Can Reach | Cannot Reach |
+|--------|-----------|--------------|
+| Prod VPC | Security, Shared Services, Internet (via NAT) | Dev VPC |
+| Dev VPC | Security, Shared Services, Internet (via NAT) | Prod VPC |
+| Security VPC | All VPCs (for log collection) | - |
+| Shared Services | All VPCs (for CI/CD, DNS) | - |
+
+## Usage
+```hcl
+module "transit_gateway" {
+  source = "../../modules/transit-gateway"
+
+  name        = "medflow"
+  environment = "shared"
+
+  tags = {
+    CostCenter = "infrastructure"
+  }
+}
+
+# Then attach VPCs using aws_ec2_transit_gateway_vpc_attachment
+# and associate with appropriate route tables
+```
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| name | Name prefix for resources | string | - | yes |
+| environment | Environment for tagging | string | "shared" | no |
+| amazon_side_asn | Private ASN for BGP | number | 64512 | no |
+| enable_dns_support | Enable DNS resolution | bool | true | no |
+| enable_auto_accept_shared_attachments | Auto-accept cross-account attachments | bool | false | no |
+| tags | Additional tags | map(string) | {} | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| transit_gateway_id | ID of the Transit Gateway |
+| transit_gateway_arn | ARN of the Transit Gateway |
+| prod_route_table_id | Route table for production workloads |
+| dev_route_table_id | Route table for development workloads |
+| shared_route_table_id | Route table for security and shared services |
+| ram_share_arn | RAM share ARN for cross-account access |
+
+## Cost Estimate
+
+| Component | Cost |
+|-----------|------|
+| Transit Gateway | $0.05/hour (~$36/month) |
+| Per VPC Attachment | $0.05/hour (~$36/month each) |
+| Data Processing | $0.02/GB |
+
+**Example (4 VPCs):** $36 (TGW) + $144 (4 attachments) + data = ~$180/month + data transfer
+
+## Cross-Account Setup
+
+Transit Gateway lives in the Shared Services account. Other accounts attach via:
+
+1. RAM share accepts the account/OU
+2. Workload account creates `aws_ec2_transit_gateway_vpc_attachment`
+3. Shared Services account associates attachment with correct route table
+4. Routes added to both TGW route tables and VPC route tables
+
+## Compliance Notes
+
+- **Network Isolation**: Prod/Dev cannot communicate at the network layer
+- **Audit Trail**: VPC Flow Logs capture all cross-VPC traffic
+- **Least Privilege**: Attachments must be explicitly approved (auto-accept disabled)
+
+# Transit Gateway Attachment Module
+
+Connects a VPC to an existing Transit Gateway and configures routing.
+
+## What This Module Does
+
+1. **Creates TGW Attachment**: Connects the VPC to the Transit Gateway via specified subnets
+2. **Associates Route Table**: Links the attachment to the correct TGW route table (prod/dev/shared)
+3. **Propagates Routes**: Advertises the VPC's CIDR to the TGW route table
+4. **Configures VPC Routes**: Adds routes in the VPC pointing to the TGW
+
+## Usage
+```hcl
+module "vpc_attachment" {
+  source = "../../modules/tgw-attachment"
+
+  name                           = "prod"
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.private_subnet_ids
+  transit_gateway_id             = data.aws_ec2_transit_gateway.main.id
+  transit_gateway_route_table_id = data.aws_ec2_transit_gateway_route_table.prod.id
+
+  vpc_route_table_ids = concat(
+    module.vpc.private_route_table_ids,
+    [module.vpc.data_route_table_id]
+  )
+
+  # CIDRs of other VPCs to route through TGW
+  destination_cidr_blocks = [
+    "10.0.0.0/16",   # Security VPC
+    "10.1.0.0/16",   # Shared Services VPC
+  ]
+}
+```
+
+## Inputs
+
+| Name | Description | Type | Required |
+|------|-------------|------|:--------:|
+| name | Name prefix | string | yes |
+| vpc_id | VPC to attach | string | yes |
+| subnet_ids | Subnets for attachment | list(string) | yes |
+| transit_gateway_id | TGW to attach to | string | yes |
+| transit_gateway_route_table_id | TGW route table for association | string | yes |
+| vpc_route_table_ids | VPC route tables needing TGW routes | list(string) | yes |
+| destination_cidr_blocks | CIDRs to route through TGW | list(string) | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| attachment_id | ID of the TGW attachment |
+| vpc_id | ID of the attached VPC |
+
+## Architecture Note
+
+Place the attachment in **private subnets**, not public. The TGW attachment creates an ENI in each subnet—these don't need internet access.
