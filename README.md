@@ -281,3 +281,124 @@ module "vpc_attachment" {
 ## Architecture Note
 
 Place the attachment in **private subnets**, not public. The TGW attachment creates an ENI in each subnet—these don't need internet access.
+
+# Security Baseline Module
+
+Implements core security controls for HIPAA-compliant AWS environments.
+
+## Components
+
+### CloudTrail
+- Multi-region API audit logging
+- Log file integrity validation (tamper detection)
+- S3 storage with encryption and lifecycle policies
+- 7-year retention (HIPAA requirement)
+
+### GuardDuty
+- ML-based threat detection
+- S3 protection (detects suspicious access patterns)
+- EBS malware scanning
+- Kubernetes audit log analysis
+- 15-minute finding publication
+
+### AWS Config
+- Continuous configuration recording
+- HIPAA-focused compliance rules:
+  - S3 public access prohibited
+  - S3/EBS/RDS encryption required
+  - VPC Flow Logs enabled
+  - MFA required for IAM users and root
+
+### Security Hub
+- Centralized findings dashboard
+- Enabled standards:
+  - AWS Foundational Security Best Practices
+  - CIS AWS Foundations Benchmark
+  - NIST 800-53
+- GuardDuty integration
+
+## Architecture
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      SECURITY ACCOUNT                           │
+│                                                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │ CloudTrail  │  │  GuardDuty  │  │      Security Hub       │ │
+│  │   Logs      │  │  Findings   │  │   (Aggregated View)     │ │
+│  │     │       │  │      │      │  │           ▲             │ │
+│  │     ▼       │  │      ▼      │  │           │             │ │
+│  │ ┌───────┐   │  │  ┌───────┐  │  │  Findings from all      │ │
+│  │ │  S3   │   │  │  │ S.Hub │──┼──│  accounts flow here     │ │
+│  │ │Bucket │   │  │  └───────┘  │  │                         │ │
+│  │ └───────┘   │  │             │  └─────────────────────────┘ │
+│  └─────────────┘  └─────────────┘                               │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                     AWS Config                           │   │
+│  │  Rules: S3 encryption, RDS encryption, VPC flow logs,   │   │
+│  │         MFA enabled, no public access                    │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Usage
+```hcl
+module "security_baseline" {
+  source = "../../modules/security-baseline"
+
+  name                      = "medflow"
+  cloudtrail_s3_bucket_name = "medflow-cloudtrail-logs-123456789012"
+  config_s3_bucket_name     = "medflow-config-snapshots-123456789012"
+
+  # All services enabled by default
+  enable_cloudtrail   = true
+  enable_guardduty    = true
+  enable_config       = true
+  enable_security_hub = true
+}
+```
+
+## Inputs
+
+| Name | Description | Type | Default |
+|------|-------------|------|---------|
+| name | Name prefix | string | - |
+| cloudtrail_s3_bucket_name | Bucket for CloudTrail logs | string | - |
+| config_s3_bucket_name | Bucket for Config snapshots | string | - |
+| cloudtrail_retention_days | Log retention period | number | 2555 |
+| enable_cloudtrail | Enable CloudTrail | bool | true |
+| enable_guardduty | Enable GuardDuty | bool | true |
+| enable_config | Enable AWS Config | bool | true |
+| enable_security_hub | Enable Security Hub | bool | true |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| cloudtrail_arn | ARN of CloudTrail |
+| cloudtrail_s3_bucket_name | CloudTrail log bucket |
+| guardduty_detector_id | GuardDuty detector ID |
+| config_recorder_id | Config recorder ID |
+| security_hub_arn | Security Hub ARN |
+
+## Cost Estimate
+
+| Component | Estimated Cost |
+|-----------|---------------|
+| CloudTrail | Free (first trail) + S3 storage |
+| GuardDuty | ~$4/million events analyzed |
+| AWS Config | $0.003/rule evaluation + S3 |
+| Security Hub | $0.0010/finding (first 10K free) |
+
+**Typical small environment:** $50-150/month
+
+## HIPAA Compliance Mapping
+
+| HIPAA Requirement | Implementation |
+|-------------------|----------------|
+| §164.312(b) Audit controls | CloudTrail with integrity validation |
+| §164.308(a)(1) Risk analysis | Security Hub compliance dashboard |
+| §164.308(a)(6) Security incidents | GuardDuty threat detection |
+| §164.308(a)(8) Evaluation | AWS Config continuous compliance |
+| §164.312(a)(1) Access controls | Config rules for IAM/MFA |
+| §164.312(e)(1) Transmission security | Config rules for encryption |
