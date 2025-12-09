@@ -522,6 +522,104 @@ terraform init && terraform plan
 
 ---
 
+# Cloud Security Portfolio
+
+Production-grade cloud security architectures demonstrating enterprise patterns and compliance frameworks.
+
+## 🏗️ Projects
+
+### [Zero-Trust Architecture for Fintech](./zero-trust/)
+
+PCI-DSS Level 1 compliant payment processing platform implementing zero-trust security principles.
+
+**Scenario:** NovaPay — Series B fintech startup processing $50M monthly, requiring PCI certification in 90 days.
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Network Isolation | VPC, NACLs, Security Groups | CDE isolation, 80% scope reduction |
+| API Security | WAF, API Gateway | SQLi/XSS protection, rate limiting |
+| Data Protection | KMS, Tokenization | Card data encryption, PCI 3.x compliance |
+| Identity | IAM Roles, Secrets Manager | Zero standing credentials |
+| Observability | CloudWatch, Flow Logs | 365-day audit trail |
+
+**Key Deliverables:**
+- 4 Terraform modules (production-ready)
+- 4 Architecture Decision Records (ADRs)
+- Complete environment configuration
+- ~$350/month infrastructure cost
+
+![Architecture](./zero-trust/diagrams/architecture.svg)
+
+---
+
+## 📁 Repository Structure
+```
+cloud-security-portfolio/
+├── README.md                    # This file
+├── zero-trust/                  # PCI-DSS compliant fintech architecture
+│   ├── README.md
+│   ├── diagrams/
+│   │   └── architecture.svg
+│   ├── docs/decisions/
+│   │   ├── 001-identity-and-access.md
+│   │   ├── 002-network-segmentation.md
+│   │   ├── 003-data-protection.md
+│   │   └── 004-api-security.md
+│   └── terraform/
+│       ├── modules/
+│       │   ├── cde-network/
+│       │   ├── api-gateway/
+│       │   ├── secrets-management/
+│       │   └── tokenization/
+│       └── environments/
+│           └── novapay-prod/
+└── (future projects)
+```
+
+---
+
+## 🛡️ Security Principles
+
+All projects in this portfolio follow these principles:
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Zero Trust** | Never trust, always verify. No implicit trust based on network location. |
+| **Least Privilege** | Every identity gets minimum permissions required. |
+| **Defense in Depth** | Multiple security layers — breach of one doesn't compromise all. |
+| **Encryption Everywhere** | Data encrypted at rest and in transit. |
+| **Audit Everything** | Comprehensive logging for forensics and compliance. |
+| **Infrastructure as Code** | All infrastructure defined in Terraform — no manual changes. |
+
+---
+
+## 🎯 Target Roles
+
+This portfolio demonstrates skills relevant to:
+
+- Cloud Security Architect
+- Security Engineering Manager
+- DevSecOps Lead
+- Platform Security Engineer
+- Compliance Engineering Lead
+
+---
+
+## 📜 Certifications
+
+- **CISSP** — Certified Information Systems Security Professional
+- **CCSP** — Certified Cloud Security Professional  
+- **AWS Solutions Architect**
+
+---
+
+
+---
+
+## 📄 License
+
+This project is for portfolio demonstration purposes. Feel free to reference the patterns and architectures.
+
 ## 👤 Author
 
 **Sabur Ajao** — Cloud Security Architect
