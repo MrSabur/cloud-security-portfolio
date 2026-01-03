@@ -478,6 +478,8 @@ Multi-account architecture with Transit Gateway networking, IAM permission bound
 | **HIPAA Security Rule** | Access controls, audit controls, transmission security, encryption |
 | **NIST CSF** | PR.AC (Access Control), PR.DS (Data Security), DE.CM (Monitoring) |
 | **CIS AWS Benchmark** | Security Hub automated checks |
+| **NIS2 Directive (EU)** | Article 21 risk measures, Article 23 incident reporting, encryption, access control |
+| **PCI-DSS v4.0** | Network segmentation, encryption, access control (see [zero-trust](/zero-trust)) |
 
 ---
 
@@ -577,6 +579,23 @@ cloud-security-portfolio/
 ```
 
 ---
+
+### NIS2 Directive (EU)
+
+This architecture supports NIS2 compliance for essential and important entities operating in the EU.
+
+| NIS2 Article | Requirement | Implementation |
+|--------------|-------------|----------------|
+| 21(2)(a) | Risk analysis and security policies | Security Hub, AWS Config continuous compliance |
+| 21(2)(b) | Incident handling | GuardDuty detection, CloudWatch alerting, 24hr notification pipeline |
+| 21(2)(c) | Business continuity | Multi-AZ deployment, Transit Gateway redundancy |
+| 21(2)(h) | Cryptography | KMS encryption at rest, TLS 1.2+ in transit |
+| 21(2)(i) | Access control | IAM permission boundaries, least-privilege roles |
+| 21(2)(j) | Multi-factor authentication | Config rule enforcement, no console passwords |
+| 23 | Incident reporting | CloudTrail 7-year retention, Athena queryable logs |
+
+**[Full NIS2 Compliance Mapping →](docs/nis2-compliance.md)**
+
 
 ## 🛡️ Security Principles
 
