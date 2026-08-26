@@ -616,7 +616,6 @@ All projects in this portfolio follow these principles:
 This portfolio demonstrates skills relevant to:
 
 - Cloud Security Architect
-- Platform Security Engineer
 - Compliance Engineering Lead
 
 ---
