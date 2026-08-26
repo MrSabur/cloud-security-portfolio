@@ -7,11 +7,11 @@ Production-grade AWS architectures demonstrating enterprise security patterns.
 ### AWS Landing Zone
 Multi-account architecture with Transit Gateway networking, IAM permission boundaries, and centralized security controls. Designed for HIPAA compliance.
 
-### Zero-Trust Reference Architecture *(Coming Soon)*
+### Zero-Trust Architecture for Fintech
+PCI-DSS Level 1 payment platform with CDE isolation and tokenization. [View](zero-trust/)
 
-Five-pillar zero-trust implementation using AWS-native controls: identity, device, network, application, and data security layers.
-
-*Currently in development. Expected completion: December 2025.*
+### AI Security Reference Architecture
+Prompt injection defense, AI governance, and data protection for LLM systems. [View](ai-security/)
 
 ## Author
 **Sabur Ajao** — Cloud Security Architect  
@@ -617,8 +617,6 @@ All projects in this portfolio follow these principles:
 This portfolio demonstrates skills relevant to:
 
 - Cloud Security Architect
-- Security Engineering Manager
-- DevSecOps Lead
 - Platform Security Engineer
 - Compliance Engineering Lead
 
