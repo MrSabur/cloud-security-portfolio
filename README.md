@@ -20,7 +20,6 @@ Prompt injection defense, AI governance, and data protection for LLM systems. [V
 ## Tech Stack
 - Terraform (Infrastructure as Code)
 - AWS (Primary cloud provider)
-- GitHub Actions (CI/CD)
 
 ## Compliance Mappings
 - NIST Cybersecurity Framework
