@@ -107,7 +107,7 @@ variable "allowed_model_arns_tier1" {
 variable "allowed_model_arns_tier2" {
   description = "Bedrock model ARNs allowed for Tier 2 (Elevated) AI"
   type        = list(string)
-  default     = [
+  default = [
     "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-*",
     "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-sonnet-*"
   ]
@@ -116,7 +116,7 @@ variable "allowed_model_arns_tier2" {
 variable "allowed_model_arns_tier3" {
   description = "Bedrock model ARNs allowed for Tier 3 (Critical) AI"
   type        = list(string)
-  default     = [
+  default = [
     "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-haiku-*",
     "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-sonnet-*",
     "arn:aws:bedrock:*::foundation-model/anthropic.claude-3-opus-*"

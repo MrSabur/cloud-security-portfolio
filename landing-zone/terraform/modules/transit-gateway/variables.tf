@@ -35,7 +35,7 @@ variable "enable_vpn_ecmp_support" {
 variable "enable_auto_accept_shared_attachments" {
   description = "Auto-accept cross-account attachment requests (use with caution)"
   type        = bool
-  default     = false  # Require manual approval for security
+  default     = false # Require manual approval for security
 }
 
 variable "tags" {

@@ -118,6 +118,6 @@ Alarms are configured for:
 
 ## Related ADRs
 
-- [ADR-001: AI Governance and Risk Tiering](../../docs/decisions/001-ai-governance-and-risk-tiering.md)
-- [ADR-002: Data Protection for AI Systems](../../docs/decisions/002-data-protection-for-ai.md)
-- [ADR-003: Prompt Injection Defense](../../docs/decisions/003-prompt-injection-defense.md)
+- [ADR-001: AI Governance and Risk Tiering](../../../docs/decisions/001-ai-governance-and-risk-tiering.md)
+- [ADR-002: Data Protection for AI Systems](../../../docs/decisions/002-data-protection-for-ai.md)
+- [ADR-003: Prompt Injection Defense](../../../docs/decisions/003-prompt-injection-defense.md)

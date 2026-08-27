@@ -1,0 +1,53 @@
+name: Terraform Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/terraform/**'
+      - '.github/workflows/terraform-validate.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/terraform/**'
+
+jobs:
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive .
+        continue-on-error: true
+
+      - name: Validate all modules and environments
+        run: |
+          set -e
+          fail=0
+          for dir in $(find . -type d \( -path '*/terraform/modules/*' -o -path '*/terraform/environments/*' \) -not -path '*/.terraform/*'); do
+            if ! ls "$dir"/*.tf >/dev/null 2>&1; then
+              continue
+            fi
+            echo "::group::$dir"
+            if ! (cd "$dir" && terraform init -backend=false -no-color && terraform validate -no-color); then
+              echo "::error file=$dir::terraform validate failed"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: Format Check Status
+        if: steps.fmt.outcome == 'failure'
+        run: |
+          echo "::warning::Terraform files are not properly formatted. Run 'terraform fmt -recursive .' to fix."

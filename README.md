@@ -1,654 +1,137 @@
 # Cloud Security Portfolio
 
-Production-grade AWS architectures demonstrating enterprise security patterns.
+Three reference architectures for regulated cloud environments. Each one ships Terraform modules, architecture decision records explaining why the design is what it is, and a compliance mapping to the framework that actually governs the workload.
 
-## Projects
+Built by Sabur Ajao (CISSP, CCSP, AWS Solutions Architect, MBA Kellogg). MIT licensed.
 
-### AWS Landing Zone
-Multi-account architecture with Transit Gateway networking, IAM permission boundaries, and centralized security controls. Designed for HIPAA compliance.
+## The Three Architectures
 
-### Zero-Trust Reference Architecture *(Coming Soon)*
+| Architecture | Domain | Regulatory Driver | What It Demonstrates |
+|--------------|--------|-------------------|----------------------|
+| [AWS Landing Zone](landing-zone/) | Healthcare (MedFlow) | HIPAA Security Rule, NIS2 | Multi-account isolation, Transit Gateway route-table separation, centralized security baseline |
+| [Zero-Trust for Fintech](zero-trust/) | Payments (NovaPay) | PCI-DSS v4.0 | CDE isolation, tokenization, API-layer defense, zero standing credentials |
+| [AI Security](ai-security/) | Healthcare AI (MedAssist) | HIPAA, NIST AI RMF | Risk tiering and governance, PHI protection in inference, prompt injection defense |
 
-Five-pillar zero-trust implementation using AWS-native controls: identity, device, network, application, and data security layers.
+Totals across the repo: 10 Terraform modules, 11 architecture decision records, 40 Terraform files.
 
-*Currently in development. Expected completion: December 2025.*
+---
 
-## Author
-**Sabur Ajao** — Cloud Security Architect  
-[LinkedIn](https://linkedin.com/in/afolabisaburajao) | CISSP | CCSP | AWS Solutions Architect
+## AWS Landing Zone
 
-## Tech Stack
-- Terraform (Infrastructure as Code)
-- AWS (Primary cloud provider)
-- GitHub Actions (CI/CD)
+Multi-account AWS foundation for a healthcare system handling PHI. Prod and dev cannot reach each other at the network layer. Security and shared services can reach everything.
 
-## Compliance Mappings
-- NIST Cybersecurity Framework
-- HIPAA Security Rule
-
-# VPC Module
-
-Creates a three-tier VPC designed for HIPAA-compliant healthcare workloads.
-
-## Architecture
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         VPC                                 │
-│                                                             │
-│  ┌─────────────────────┐     ┌─────────────────────┐       │
-│  │   Public Subnet     │     │   Public Subnet     │       │
-│  │   (ALB, NAT GW)     │     │   (ALB, NAT GW)     │       │
-│  │      AZ-a           │     │      AZ-b           │       │
-│  └─────────────────────┘     └─────────────────────┘       │
-│                                                             │
-│  ┌─────────────────────┐     ┌─────────────────────┐       │
-│  │   Private Subnet    │     │   Private Subnet    │       │
-│  │   (App servers)     │     │   (App servers)     │       │
-│  │      AZ-a           │     │      AZ-b           │       │
-│  └─────────────────────┘     └─────────────────────┘       │
-│                                                             │
-│  ┌─────────────────────┐     ┌─────────────────────┐       │
-│  │    Data Subnet      │     │    Data Subnet      │       │
-│  │   (RDS, no internet)│     │   (RDS, no internet)│       │
-│  │      AZ-a           │     │      AZ-b           │       │
-│  └─────────────────────┘     └─────────────────────┘       │
-│                                                             │
-│  VPC Endpoints: S3 (gateway), DynamoDB (gateway)           │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Features
-
-- **Three-tier subnet architecture**: Public, Private, and Data tiers with appropriate routing
-- **HIPAA-compliant data tier**: No internet access for database subnets
-- **Configurable NAT Gateway**: Single (cost-optimized) or multi-AZ (high availability)
-- **VPC Flow Logs**: All traffic logged to CloudWatch with configurable retention
-- **VPC Endpoints**: S3 and DynamoDB gateway endpoints (free) for private access
-
-## Usage
-```hcl
-module "vpc" {
-  source = "../../modules/vpc"
-
-  name        = "prod"
-  cidr_block  = "10.20.0.0/16"
-  environment = "production"
-
-  enable_nat_gateway = true
-  single_nat_gateway = false  # Multi-AZ for production
-
-  enable_flow_logs        = true
-  flow_log_retention_days = 365
-}
-```
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| name | Name prefix for all resources | string | - | yes |
-| cidr_block | CIDR block for the VPC | string | - | yes |
-| environment | Environment name | string | - | yes |
-| availability_zones | List of AZs to use | list(string) | [] (auto) | no |
-| enable_nat_gateway | Create NAT Gateway(s) | bool | true | no |
-| single_nat_gateway | Use single NAT (cost savings) | bool | false | no |
-| enable_flow_logs | Enable VPC Flow Logs | bool | true | no |
-| flow_log_retention_days | Days to retain flow logs | number | 365 | no |
-| tags | Additional tags | map(string) | {} | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| vpc_id | The ID of the VPC |
-| vpc_cidr_block | The CIDR block of the VPC |
-| public_subnet_ids | List of public subnet IDs |
-| private_subnet_ids | List of private subnet IDs |
-| data_subnet_ids | List of data subnet IDs |
-| nat_gateway_ids | List of NAT Gateway IDs |
-| nat_gateway_public_ips | List of NAT Gateway public IPs |
-
-## Cost Estimate
-
-| Component | Single NAT | Multi-AZ NAT |
-|-----------|------------|--------------|
-| NAT Gateway | $32/month | $64/month |
-| Data Processing | $0.045/GB | $0.045/GB |
-| VPC Flow Logs | ~$0.50/GB ingested | ~$0.50/GB ingested |
-| VPC Endpoints (Gateway) | Free | Free |
-
-## Compliance
-
-### HIPAA
-
-- Data tier has no internet route (PHI cannot be directly exfiltrated)
-- All network traffic logged via VPC Flow Logs
-- Encryption in transit enforced at application layer (ALB with TLS)
-
-### NIST CSF
-
-- PR.AC-5: Network segmentation via three-tier architecture
-- PR.DS-2: Data-in-transit protection via private subnets
-- DE.CM-1: Network monitoring via Flow Logs
-
-# Transit Gateway Module
-
-Creates a Transit Gateway hub with route table isolation for environment separation.
-
-## Architecture
-```
-                    ┌─────────────────────────────────────────┐
-                    │           TRANSIT GATEWAY               │
-                    │                                         │
-                    │  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-                    │  │ Prod RT │ │ Dev RT  │ │Shared RT│   │
-                    │  └─────────┘ └─────────┘ └─────────┘   │
-                    └─────────────────────────────────────────┘
-                           │            │            │
-          ┌────────────────┴────────────┴────────────┴────────┐
-          │                      │                            │
-          ▼                      ▼                            ▼
-     ┌─────────┐           ┌──────────┐                 ┌──────────┐
-     │Workloads│           │Workloads │                 │ Security │
-     │  Prod   │           │   Dev    │                 │ + Shared │
-     └─────────┘           └──────────┘                 └──────────┘
-```
-
-## Isolation Model
-
-| Source | Can Reach | Cannot Reach |
-|--------|-----------|--------------|
-| Prod VPC | Security, Shared Services, Internet (via NAT) | Dev VPC |
-| Dev VPC | Security, Shared Services, Internet (via NAT) | Prod VPC |
-| Security VPC | All VPCs (for log collection) | - |
-| Shared Services | All VPCs (for CI/CD, DNS) | - |
-
-## Usage
-```hcl
-module "transit_gateway" {
-  source = "../../modules/transit-gateway"
-
-  name        = "medflow"
-  environment = "shared"
-
-  tags = {
-    CostCenter = "infrastructure"
-  }
-}
-
-# Then attach VPCs using aws_ec2_transit_gateway_vpc_attachment
-# and associate with appropriate route tables
-```
-
-## Inputs
-
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| name | Name prefix for resources | string | - | yes |
-| environment | Environment for tagging | string | "shared" | no |
-| amazon_side_asn | Private ASN for BGP | number | 64512 | no |
-| enable_dns_support | Enable DNS resolution | bool | true | no |
-| enable_auto_accept_shared_attachments | Auto-accept cross-account attachments | bool | false | no |
-| tags | Additional tags | map(string) | {} | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| transit_gateway_id | ID of the Transit Gateway |
-| transit_gateway_arn | ARN of the Transit Gateway |
-| prod_route_table_id | Route table for production workloads |
-| dev_route_table_id | Route table for development workloads |
-| shared_route_table_id | Route table for security and shared services |
-| ram_share_arn | RAM share ARN for cross-account access |
-
-## Cost Estimate
-
-| Component | Cost |
-|-----------|------|
-| Transit Gateway | $0.05/hour (~$36/month) |
-| Per VPC Attachment | $0.05/hour (~$36/month each) |
-| Data Processing | $0.02/GB |
-
-**Example (4 VPCs):** $36 (TGW) + $144 (4 attachments) + data = ~$180/month + data transfer
-
-## Cross-Account Setup
-
-Transit Gateway lives in the Shared Services account. Other accounts attach via:
-
-1. RAM share accepts the account/OU
-2. Workload account creates `aws_ec2_transit_gateway_vpc_attachment`
-3. Shared Services account associates attachment with correct route table
-4. Routes added to both TGW route tables and VPC route tables
-
-## Compliance Notes
-
-- **Network Isolation**: Prod/Dev cannot communicate at the network layer
-- **Audit Trail**: VPC Flow Logs capture all cross-VPC traffic
-- **Least Privilege**: Attachments must be explicitly approved (auto-accept disabled)
-
-# Transit Gateway Attachment Module
-
-Connects a VPC to an existing Transit Gateway and configures routing.
-
-## What This Module Does
-
-1. **Creates TGW Attachment**: Connects the VPC to the Transit Gateway via specified subnets
-2. **Associates Route Table**: Links the attachment to the correct TGW route table (prod/dev/shared)
-3. **Propagates Routes**: Advertises the VPC's CIDR to the TGW route table
-4. **Configures VPC Routes**: Adds routes in the VPC pointing to the TGW
-
-## Usage
-```hcl
-module "vpc_attachment" {
-  source = "../../modules/tgw-attachment"
-
-  name                           = "prod"
-  vpc_id                         = module.vpc.vpc_id
-  subnet_ids                     = module.vpc.private_subnet_ids
-  transit_gateway_id             = data.aws_ec2_transit_gateway.main.id
-  transit_gateway_route_table_id = data.aws_ec2_transit_gateway_route_table.prod.id
-
-  vpc_route_table_ids = concat(
-    module.vpc.private_route_table_ids,
-    [module.vpc.data_route_table_id]
-  )
-
-  # CIDRs of other VPCs to route through TGW
-  destination_cidr_blocks = [
-    "10.0.0.0/16",   # Security VPC
-    "10.1.0.0/16",   # Shared Services VPC
-  ]
-}
-```
-
-## Inputs
-
-| Name | Description | Type | Required |
-|------|-------------|------|:--------:|
-| name | Name prefix | string | yes |
-| vpc_id | VPC to attach | string | yes |
-| subnet_ids | Subnets for attachment | list(string) | yes |
-| transit_gateway_id | TGW to attach to | string | yes |
-| transit_gateway_route_table_id | TGW route table for association | string | yes |
-| vpc_route_table_ids | VPC route tables needing TGW routes | list(string) | yes |
-| destination_cidr_blocks | CIDRs to route through TGW | list(string) | no |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| attachment_id | ID of the TGW attachment |
-| vpc_id | ID of the attached VPC |
-
-## Architecture Note
-
-Place the attachment in **private subnets**, not public. The TGW attachment creates an ENI in each subnet—these don't need internet access.
-
-# Security Baseline Module
-
-Implements core security controls for HIPAA-compliant AWS environments.
-
-## Components
-
-### CloudTrail
-- Multi-region API audit logging
-- Log file integrity validation (tamper detection)
-- S3 storage with encryption and lifecycle policies
-- 7-year retention (HIPAA requirement)
-
-### GuardDuty
-- ML-based threat detection
-- S3 protection (detects suspicious access patterns)
-- EBS malware scanning
-- Kubernetes audit log analysis
-- 15-minute finding publication
-
-### AWS Config
-- Continuous configuration recording
-- HIPAA-focused compliance rules:
-  - S3 public access prohibited
-  - S3/EBS/RDS encryption required
-  - VPC Flow Logs enabled
-  - MFA required for IAM users and root
-
-### Security Hub
-- Centralized findings dashboard
-- Enabled standards:
-  - AWS Foundational Security Best Practices
-  - CIS AWS Foundations Benchmark
-  - NIST 800-53
-- GuardDuty integration
-
-## Architecture
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      SECURITY ACCOUNT                           │
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
-│  │ CloudTrail  │  │  GuardDuty  │  │      Security Hub       │ │
-│  │   Logs      │  │  Findings   │  │   (Aggregated View)     │ │
-│  │     │       │  │      │      │  │           ▲             │ │
-│  │     ▼       │  │      ▼      │  │           │             │ │
-│  │ ┌───────┐   │  │  ┌───────┐  │  │  Findings from all      │ │
-│  │ │  S3   │   │  │  │ S.Hub │──┼──│  accounts flow here     │ │
-│  │ │Bucket │   │  │  └───────┘  │  │                         │ │
-│  │ └───────┘   │  │             │  └─────────────────────────┘ │
-│  └─────────────┘  └─────────────┘                               │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                     AWS Config                           │   │
-│  │  Rules: S3 encryption, RDS encryption, VPC flow logs,   │   │
-│  │         MFA enabled, no public access                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Usage
-```hcl
-module "security_baseline" {
-  source = "../../modules/security-baseline"
-
-  name                      = "medflow"
-  cloudtrail_s3_bucket_name = "medflow-cloudtrail-logs-123456789012"
-  config_s3_bucket_name     = "medflow-config-snapshots-123456789012"
-
-  # All services enabled by default
-  enable_cloudtrail   = true
-  enable_guardduty    = true
-  enable_config       = true
-  enable_security_hub = true
-}
-```
-
-## Inputs
-
-| Name | Description | Type | Default |
-|------|-------------|------|---------|
-| name | Name prefix | string | - |
-| cloudtrail_s3_bucket_name | Bucket for CloudTrail logs | string | - |
-| config_s3_bucket_name | Bucket for Config snapshots | string | - |
-| cloudtrail_retention_days | Log retention period | number | 2555 |
-| enable_cloudtrail | Enable CloudTrail | bool | true |
-| enable_guardduty | Enable GuardDuty | bool | true |
-| enable_config | Enable AWS Config | bool | true |
-| enable_security_hub | Enable Security Hub | bool | true |
-
-## Outputs
-
-| Name | Description |
-|------|-------------|
-| cloudtrail_arn | ARN of CloudTrail |
-| cloudtrail_s3_bucket_name | CloudTrail log bucket |
-| guardduty_detector_id | GuardDuty detector ID |
-| config_recorder_id | Config recorder ID |
-| security_hub_arn | Security Hub ARN |
-
-## Cost Estimate
-
-| Component | Estimated Cost |
-|-----------|---------------|
-| CloudTrail | Free (first trail) + S3 storage |
-| GuardDuty | ~$4/million events analyzed |
-| AWS Config | $0.003/rule evaluation + S3 |
-| Security Hub | $0.0010/finding (first 10K free) |
-
-**Typical small environment:** $50-150/month
-
-## HIPAA Compliance Mapping
-
-| HIPAA Requirement | Implementation |
-|-------------------|----------------|
-| §164.312(b) Audit controls | CloudTrail with integrity validation |
-| §164.308(a)(1) Risk analysis | Security Hub compliance dashboard |
-| §164.308(a)(6) Security incidents | GuardDuty threat detection |
-| §164.308(a)(8) Evaluation | AWS Config continuous compliance |
-| §164.312(a)(1) Access controls | Config rules for IAM/MFA |
-| §164.312(e)(1) Transmission security | Config rules for encryption |
-
-# Cloud Security Portfolio
-
-Production-grade AWS architectures demonstrating enterprise security patterns for HIPAA-compliant healthcare environments.
-
-## 🏗️ Projects
-
-### AWS Landing Zone
-
-Multi-account architecture with Transit Gateway networking, IAM permission boundaries, and centralized security controls.
-
-**[View Landing Zone →](landing-zone/)**
-
-#### Architecture Overview
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           AWS ORGANIZATION                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐ │
-│  │    SECURITY     │  │ SHARED SERVICES │  │         WORKLOADS          │ │
-│  │    ACCOUNT      │  │    ACCOUNT      │  │                            │ │
-│  │                 │  │                 │  │  ┌─────────┐ ┌─────────┐   │ │
-│  │ • CloudTrail    │  │ • Transit GW    │  │  │  PROD   │ │   DEV   │   │ │
-│  │ • GuardDuty     │  │ • NAT Gateway   │  │  │  VPC    │ │   VPC   │   │ │
-│  │ • Config        │  │ • DNS           │  │  │         │ │         │   │ │
-│  │ • Security Hub  │  │ • CI/CD         │  │  └─────────┘ └─────────┘   │ │
-│  │                 │  │                 │  │       │           │        │ │
-│  └────────┬────────┘  └────────┬────────┘  └───────┼───────────┼────────┘ │
-│           │                    │                   │           │          │
-│           └────────────────────┴───────────────────┴───────────┘          │
-│                                │                                          │
-│                    ┌───────────┴───────────┐                              │
-│                    │    TRANSIT GATEWAY    │                              │
-│                    │    (Network Hub)      │                              │
-│                    └───────────────────────┘                              │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-#### Key Features
-
-| Feature | Description |
-|---------|-------------|
-| **Multi-Account Isolation** | Blast radius containment via AWS Organizations |
-| **Network Segmentation** | Transit Gateway with route table isolation (prod ↔ dev blocked) |
-| **Three-Tier VPCs** | Public, Private, Data subnets with defense in depth |
-| **HIPAA Compliance** | 7-year log retention, encryption at rest, audit controls |
-| **Security Baseline** | GuardDuty, Security Hub, AWS Config with compliance rules |
-
-#### Modules
+**Modules**
 
 | Module | Purpose |
 |--------|---------|
-| [vpc](landing-zone/terraform/modules/vpc/) | Three-tier VPC with NAT, flow logs, VPC endpoints |
-| [transit-gateway](landing-zone/terraform/modules/transit-gateway/) | Hub-and-spoke networking with route table isolation |
-| [tgw-attachment](landing-zone/terraform/modules/tgw-attachment/) | VPC-to-TGW connectivity |
-| [security-baseline](landing-zone/terraform/modules/security-baseline/) | CloudTrail, GuardDuty, Config, Security Hub |
+| [vpc](landing-zone/terraform/modules/vpc/) | Three-tier VPC (public, private, data) with NAT, flow logs, and gateway endpoints. Data tier has no internet route. |
+| [transit-gateway](landing-zone/terraform/modules/transit-gateway/) | Hub with three route tables enforcing prod/dev isolation |
+| [tgw-attachment](landing-zone/terraform/modules/tgw-attachment/) | VPC-to-TGW connectivity, association, and route propagation |
+| [security-baseline](landing-zone/terraform/modules/security-baseline/) | CloudTrail with log file validation, GuardDuty, AWS Config rules, Security Hub |
 
-#### Design Decisions
+**Decision records**
 
 - [ADR-001: Multi-Account Strategy](landing-zone/docs/decisions/001-multi-account-strategy.md)
 - [ADR-002: Network Topology](landing-zone/docs/decisions/002-network-topology.md)
+- [ADR-003: Transit Gateway Architecture](landing-zone/docs/decisions/003-transit-gateway.md)
+- [ADR-004: Security Baseline Architecture](landing-zone/docs/decisions/004-security-baseline.md)
+
+**Compliance:** [HIPAA mapping](landing-zone/terraform/modules/security-baseline/README.md) covering 164.312(b) audit controls, 164.308(a)(1) risk analysis, 164.308(a)(6) incident procedures, and 164.312(e)(1) transmission security. [Full NIS2 Directive mapping](landing-zone/docs/nis2-compliance.md) for EU entities.
+
+**Cost:** roughly $350/month for a small environment. Transit Gateway hub plus four attachments is $180 of that. Full breakdown in the module READMEs.
 
 ---
 
-## 🛡️ Compliance Mapping
+## Zero-Trust Architecture for Fintech
 
-| Framework | Coverage |
-|-----------|----------|
-| **HIPAA Security Rule** | Access controls, audit controls, transmission security, encryption |
-| **NIST CSF** | PR.AC (Access Control), PR.DS (Data Security), DE.CM (Monitoring) |
-| **CIS AWS Benchmark** | Security Hub automated checks |
-| **NIS2 Directive (EU)** | Article 21 risk measures, Article 23 incident reporting, encryption, access control |
-| **PCI-DSS v4.0** | Network segmentation, encryption, access control (see [zero-trust](/zero-trust)) |
+NovaPay is a Series B payments company processing $50M monthly and targeting PCI-DSS Level 1 certification in 90 days. The design goal is scope reduction: keep cardholder data inside a small, hard boundary so the audit covers four services instead of forty.
 
----
+**Modules**
 
-## 💰 Cost Estimate
+| Module | Purpose |
+|--------|---------|
+| [cde-network](zero-trust/terraform/modules/cde-network/) | Cardholder Data Environment isolation via dedicated subnets, NACLs, per-service security groups, and no-internet VPC endpoints |
+| [tokenization](zero-trust/terraform/modules/tokenization/) | Tokenization service on ECS with an encrypted card vault, keeping raw PAN out of application systems |
+| [api-gateway](zero-trust/terraform/modules/api-gateway/) | WAF, rate limiting, usage plans, and access logging at the edge |
+| [secrets-management](zero-trust/terraform/modules/secrets-management/) | KMS keys with rotation, Secrets Manager with automatic rotation, no standing credentials |
 
-| Component | Monthly Cost |
-|-----------|--------------|
-| Transit Gateway (hub + 4 attachments) | ~$180 |
-| NAT Gateways (2 in shared services) | ~$64 |
-| VPC Flow Logs | ~$20 |
-| GuardDuty | ~$50 |
-| AWS Config | ~$30 |
-| Security Hub | ~$10 |
-| **Total** | **~$350/month** |
+**Decision records**
 
-*Estimate for small environment. Production costs vary with data transfer and resource count.*
+- [ADR-001: Identity and Access Strategy](zero-trust/docs/decisions/001-identity-and-access.md)
+- [ADR-002: Network Segmentation and CDE Isolation](zero-trust/docs/decisions/002-network-segmentation.md)
+- [ADR-003: Data Protection and Tokenization](zero-trust/docs/decisions/003-data-protection.md)
+- [ADR-004: API Security](zero-trust/docs/decisions/004-api-security.md)
+
+**Environment:** [novapay-prod](zero-trust/terraform/environments/novapay-prod/) composes all four modules into a deployable configuration.
+
+![Zero-Trust Architecture](zero-trust/diagrams/architecture.svg)
 
 ---
 
-## 🚀 Getting Started
+## AI Security Reference Architecture
 
-### Prerequisites
+MedAssist Health System is adopting AI across clinical, operational, and research domains under HIPAA. The governance problem is routing: a chatbot answering "what are your visiting hours" should not go through the same review as an AI suggesting a diagnosis.
 
-- Terraform >= 1.5.0
-- AWS CLI configured
-- AWS Organizations set up
+**Modules**
 
-### Deployment Order
+| Module | Purpose |
+|--------|---------|
+| [ai-data-protection](ai-security/terraform/modules/ai-data-protection/) | Bedrock guardrails with PHI and MRN filters, KMS encryption, tiered S3 access, Macie classification, audit metric filters |
+| [prompt-security](ai-security/terraform/modules/prompt-security/) | WAF injection rules, input analysis and output validation Lambdas, contextual grounding thresholds, EventBridge incident routing |
+
+**Decision records**
+
+- [ADR-001: AI Governance and Risk Tiering](ai-security/docs/decisions/001-ai-governance-and-risk-tiering.md)
+- [ADR-002: Data Protection for AI Systems](ai-security/docs/decisions/002-data-protection-for-ai.md)
+- [ADR-003: Prompt Injection Defense and Output Security](ai-security/docs/decisions/003-prompt-injection-defense.md)
+
+**Full detail:** [ai-security/README.md](ai-security/README.md)
+
+---
+
+## Compliance Coverage
+
+| Framework | Where |
+|-----------|-------|
+| HIPAA Security Rule | Landing zone security baseline, AI data protection |
+| PCI-DSS v4.0 | Zero-trust CDE isolation, tokenization, API security |
+| NIST Cybersecurity Framework | Landing zone (PR.AC, PR.DS, DE.CM) |
+| NIST AI RMF | AI security governance and monitoring |
+| NIS2 Directive (EU) | [Landing zone Article 21 and 23 mapping](landing-zone/docs/nis2-compliance.md) |
+| CIS AWS Foundations Benchmark | Security Hub standards subscription in the security baseline |
+| OWASP Top 10 for LLM Applications | AI security prompt injection defense |
+
+## Design Principles
+
+Zero trust: no implicit trust from network position. Least privilege on every identity. Defense in depth, so one failed control does not end the argument. Encryption at rest and in transit. Audit everything. All infrastructure in Terraform, no console changes.
+
+## Getting Started
+
+Requires Terraform 1.5.0 or later and configured AWS credentials.
+
 ```bash
-# 1. Security Account (logging infrastructure)
-cd landing-zone/terraform/environments/security
-terraform init && terraform plan
+git clone https://github.com/MrSabur/cloud-security-portfolio.git
+cd cloud-security-portfolio
 
-# 2. Shared Services (Transit Gateway hub)
-cd ../shared-services
-terraform init && terraform plan
-
-# 3. Workload Accounts (attach to TGW)
-cd ../workloads-prod
-terraform init && terraform plan
+# Validate any module without AWS credentials
+cd zero-trust/terraform/modules/cde-network
+terraform init -backend=false && terraform validate
 ```
 
----
+Deployment order for the landing zone is shared services first (Transit Gateway hub), then workload accounts (which attach to it). Each environment directory has its own README.
 
-# Cloud Security Portfolio
+## Current State
 
-Production-grade cloud security architectures demonstrating enterprise patterns and compliance frameworks.
+The landing zone `security` environment and both AI security modules are written but not yet composed into deployable environment configurations. The Terraform validates; it is not wired end to end. Workload TGW attachments are staged and commented pending a RAM share.
 
-## 🏗️ Projects
+A research AI governance ADR covering trial matching, re-identification risk, and 21 CFR Part 11 is planned and not yet published.
 
-### [Zero-Trust Architecture for Fintech](./zero-trust/)
+## License
 
-PCI-DSS Level 1 compliant payment processing platform implementing zero-trust security principles.
+MIT. See [LICENSE](LICENSE).
 
-**Scenario:** NovaPay — Series B fintech startup processing $50M monthly, requiring PCI certification in 90 days.
+## Author
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Network Isolation | VPC, NACLs, Security Groups | CDE isolation, 80% scope reduction |
-| API Security | WAF, API Gateway | SQLi/XSS protection, rate limiting |
-| Data Protection | KMS, Tokenization | Card data encryption, PCI 3.x compliance |
-| Identity | IAM Roles, Secrets Manager | Zero standing credentials |
-| Observability | CloudWatch, Flow Logs | 365-day audit trail |
+**Sabur Ajao**, Cloud Security Architect. [LinkedIn](https://linkedin.com/in/afolabisaburajao)
 
-**Key Deliverables:**
-- 4 Terraform modules (production-ready)
-- 4 Architecture Decision Records (ADRs)
-- Complete environment configuration
-- ~$350/month infrastructure cost
-
-![Architecture](./zero-trust/diagrams/architecture.svg)
-
----
-
-## 📁 Repository Structure
-```
-cloud-security-portfolio/
-├── README.md                    # This file
-├── zero-trust/                  # PCI-DSS compliant fintech architecture
-│   ├── README.md
-│   ├── diagrams/
-│   │   └── architecture.svg
-│   ├── docs/decisions/
-│   │   ├── 001-identity-and-access.md
-│   │   ├── 002-network-segmentation.md
-│   │   ├── 003-data-protection.md
-│   │   └── 004-api-security.md
-│   └── terraform/
-│       ├── modules/
-│       │   ├── cde-network/
-│       │   ├── api-gateway/
-│       │   ├── secrets-management/
-│       │   └── tokenization/
-│       └── environments/
-│           └── novapay-prod/
-└── (future projects)
-```
-
----
-
-### NIS2 Directive (EU)
-
-This architecture supports NIS2 compliance for essential and important entities operating in the EU.
-
-| NIS2 Article | Requirement | Implementation |
-|--------------|-------------|----------------|
-| 21(2)(a) | Risk analysis and security policies | Security Hub, AWS Config continuous compliance |
-| 21(2)(b) | Incident handling | GuardDuty detection, CloudWatch alerting, 24hr notification pipeline |
-| 21(2)(c) | Business continuity | Multi-AZ deployment, Transit Gateway redundancy |
-| 21(2)(h) | Cryptography | KMS encryption at rest, TLS 1.2+ in transit |
-| 21(2)(i) | Access control | IAM permission boundaries, least-privilege roles |
-| 21(2)(j) | Multi-factor authentication | Config rule enforcement, no console passwords |
-| 23 | Incident reporting | CloudTrail 7-year retention, Athena queryable logs |
-
-**[Full NIS2 Compliance Mapping →](docs/nis2-compliance.md)**
-
-
-## 🛡️ Security Principles
-
-All projects in this portfolio follow these principles:
-
-| Principle | Implementation |
-|-----------|----------------|
-| **Zero Trust** | Never trust, always verify. No implicit trust based on network location. |
-| **Least Privilege** | Every identity gets minimum permissions required. |
-| **Defense in Depth** | Multiple security layers — breach of one doesn't compromise all. |
-| **Encryption Everywhere** | Data encrypted at rest and in transit. |
-| **Audit Everything** | Comprehensive logging for forensics and compliance. |
-| **Infrastructure as Code** | All infrastructure defined in Terraform — no manual changes. |
-
----
-
-## 🎯 Target Roles
-
-This portfolio demonstrates skills relevant to:
-
-- Cloud Security Architect
-- Security Engineering Manager
-- DevSecOps Lead
-- Platform Security Engineer
-- Compliance Engineering Lead
-
----
-
-## 📜 Certifications
-
-- **CISSP** — Certified Information Systems Security Professional
-- **CCSP** — Certified Cloud Security Professional  
-- **AWS Solutions Architect**
-
----
-
-
----
-
-## 📄 License
-
-This project is for portfolio demonstration purposes. Feel free to reference the patterns and architectures.
-
-## 👤 Author
-
-**Sabur Ajao** — Cloud Security Architect
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-blue)](https://linkedin.com/in/afolabisaburajao)
-
-**Credentials:** CISSP | CCSP | AWS Solutions Architect | ISO 27032 | MBA (Kellogg)
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+CISSP | CCSP | AWS Solutions Architect | MBA, Kellogg

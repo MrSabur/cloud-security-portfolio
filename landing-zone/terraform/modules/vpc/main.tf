@@ -47,8 +47,8 @@ locals {
   # VPC: 10.20.0.0/16 → Public: 10.20.0.0/24, 10.20.1.0/24
   #                   → Private: 10.20.10.0/24, 10.20.11.0/24
   #                   → Data: 10.20.20.0/24, 10.20.21.0/24
-  vpc_cidr_prefix = split(".", var.cidr_block)[0]  # "10"
-  vpc_cidr_second = split(".", var.cidr_block)[1]  # "20"
+  vpc_cidr_prefix = split(".", var.cidr_block)[0] # "10"
+  vpc_cidr_second = split(".", var.cidr_block)[1] # "20"
 
   # Standard tags applied to all resources
   common_tags = merge(
@@ -69,8 +69,8 @@ locals {
 
 resource "aws_vpc" "this" {
   cidr_block           = var.cidr_block
-  enable_dns_hostnames = true  # Required for RDS, ECS, and other services
-  enable_dns_support   = true  # Required for VPC endpoints
+  enable_dns_hostnames = true # Required for RDS, ECS, and other services
+  enable_dns_support   = true # Required for VPC endpoints
 
   tags = merge(local.common_tags, {
     Name = "${var.name}-vpc"
@@ -100,9 +100,9 @@ resource "aws_subnet" "public" {
   count = length(local.azs)
 
   vpc_id                  = aws_vpc.this.id
-  cidr_block              = cidrsubnet(var.cidr_block, 8, count.index)  # /16 → /24
+  cidr_block              = cidrsubnet(var.cidr_block, 8, count.index) # /16 → /24
   availability_zone       = local.azs[count.index]
-  map_public_ip_on_launch = false  # Never auto-assign public IPs (security best practice)
+  map_public_ip_on_launch = false # Never auto-assign public IPs (security best practice)
 
   tags = merge(local.common_tags, {
     Name = "${var.name}-public-${local.azs[count.index]}"
@@ -156,7 +156,7 @@ resource "aws_nat_gateway" "this" {
   count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(local.azs)) : 0
 
   allocation_id = aws_eip.nat[count.index].id
-  subnet_id     = aws_subnet.public[count.index].id  # NAT GW lives in public subnet
+  subnet_id     = aws_subnet.public[count.index].id # NAT GW lives in public subnet
 
   tags = merge(local.common_tags, {
     Name = "${var.name}-nat-${count.index + 1}"
@@ -175,7 +175,7 @@ resource "aws_subnet" "private" {
   count = length(local.azs)
 
   vpc_id            = aws_vpc.this.id
-  cidr_block        = cidrsubnet(var.cidr_block, 8, count.index + 10)  # 10.20.10.0/24, 10.20.11.0/24
+  cidr_block        = cidrsubnet(var.cidr_block, 8, count.index + 10) # 10.20.10.0/24, 10.20.11.0/24
   availability_zone = local.azs[count.index]
 
   tags = merge(local.common_tags, {
@@ -222,7 +222,7 @@ resource "aws_subnet" "data" {
   count = length(local.azs)
 
   vpc_id            = aws_vpc.this.id
-  cidr_block        = cidrsubnet(var.cidr_block, 8, count.index + 20)  # 10.20.20.0/24, 10.20.21.0/24
+  cidr_block        = cidrsubnet(var.cidr_block, 8, count.index + 20) # 10.20.20.0/24, 10.20.21.0/24
   availability_zone = local.azs[count.index]
 
   tags = merge(local.common_tags, {
@@ -263,7 +263,7 @@ resource "aws_flow_log" "this" {
   iam_role_arn             = aws_iam_role.flow_log[0].arn
   log_destination          = aws_cloudwatch_log_group.flow_log[0].arn
   log_destination_type     = "cloud-watch-logs"
-  max_aggregation_interval = 60  # 1 minute intervals for timely detection
+  max_aggregation_interval = 60 # 1 minute intervals for timely detection
 
   tags = merge(local.common_tags, {
     Name = "${var.name}-flow-log"

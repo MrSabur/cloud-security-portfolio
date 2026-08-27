@@ -32,13 +32,13 @@ variable "cloudtrail_s3_bucket_name" {
 variable "cloudtrail_retention_days" {
   description = "Days to retain CloudTrail logs in S3 (HIPAA requires 6 years minimum for some records)"
   type        = number
-  default     = 2555  # ~7 years
+  default     = 2555 # ~7 years
 }
 
 variable "enable_cloudtrail_log_file_validation" {
   description = "Enable log file integrity validation"
   type        = bool
-  default     = true  # Required for HIPAA - proves logs weren't tampered
+  default     = true # Required for HIPAA - proves logs weren't tampered
 }
 
 # ------------------------------------------------------------------------------
@@ -54,7 +54,7 @@ variable "enable_guardduty" {
 variable "guardduty_finding_publishing_frequency" {
   description = "Frequency of GuardDuty finding exports (FIFTEEN_MINUTES, ONE_HOUR, SIX_HOURS)"
   type        = string
-  default     = "FIFTEEN_MINUTES"  # Fast detection for healthcare
+  default     = "FIFTEEN_MINUTES" # Fast detection for healthcare
 }
 
 # ------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ variable "config_s3_bucket_name" {
 variable "config_retention_days" {
   description = "Days to retain Config snapshots"
   type        = number
-  default     = 2555  # Match CloudTrail
+  default     = 2555 # Match CloudTrail
 }
 
 # ------------------------------------------------------------------------------
