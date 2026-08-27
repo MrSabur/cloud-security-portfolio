@@ -44,10 +44,10 @@ locals {
 resource "aws_ec2_transit_gateway" "this" {
   description = "Central hub for ${var.name} landing zone"
 
-  amazon_side_asn                 = var.amazon_side_asn
-  dns_support                     = var.enable_dns_support ? "enable" : "disable"
-  vpn_ecmp_support                = var.enable_vpn_ecmp_support ? "enable" : "disable"
-  auto_accept_shared_attachments  = var.enable_auto_accept_shared_attachments ? "enable" : "disable"
+  amazon_side_asn                = var.amazon_side_asn
+  dns_support                    = var.enable_dns_support ? "enable" : "disable"
+  vpn_ecmp_support               = var.enable_vpn_ecmp_support ? "enable" : "disable"
+  auto_accept_shared_attachments = var.enable_auto_accept_shared_attachments ? "enable" : "disable"
 
   # Don't use the default route table - we create explicit ones for isolation
   default_route_table_association = "disable"
@@ -101,7 +101,7 @@ resource "aws_ec2_transit_gateway_route_table" "shared" {
 
 resource "aws_ram_resource_share" "transit_gateway" {
   name                      = "${var.name}-tgw-share"
-  allow_external_principals = false  # Only share within organization
+  allow_external_principals = false # Only share within organization
 
   tags = merge(local.common_tags, {
     Name = "${var.name}-tgw-share"

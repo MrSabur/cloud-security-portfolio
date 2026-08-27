@@ -216,11 +216,13 @@ resource "aws_security_group_rule" "tokenization_inbound" {
 
 # Allow outbound to VPC endpoints
 resource "aws_security_group_rule" "tokenization_outbound_endpoints" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
   type                     = "egress"
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.vpc_endpoints.id
+  source_security_group_id = aws_security_group.vpc_endpoints[0].id
   security_group_id        = aws_security_group.tokenization.id
   description              = "HTTPS to VPC endpoints"
 }
@@ -260,11 +262,13 @@ resource "aws_security_group_rule" "payment_inbound_tokenization" {
 
 # Allow outbound to VPC endpoints
 resource "aws_security_group_rule" "payment_outbound_endpoints" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
   type                     = "egress"
   from_port                = 443
   to_port                  = 443
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.vpc_endpoints.id
+  source_security_group_id = aws_security_group.vpc_endpoints[0].id
   security_group_id        = aws_security_group.payment_processor.id
   description              = "HTTPS to VPC endpoints"
 }

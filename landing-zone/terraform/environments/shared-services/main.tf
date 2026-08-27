@@ -59,7 +59,7 @@ module "vpc" {
 
   # This VPC provides centralized NAT for all accounts
   enable_nat_gateway = true
-  single_nat_gateway = false  # Multi-AZ for high availability
+  single_nat_gateway = false # Multi-AZ for high availability
 
   enable_flow_logs        = true
   flow_log_retention_days = 365
@@ -110,9 +110,9 @@ module "tgw_attachment" {
 
   # CIDRs of other VPCs (Shared Services needs to reach all)
   destination_cidr_blocks = [
-    "10.0.0.0/16",   # Security VPC
-    "10.10.0.0/16",  # Workloads Dev VPC
-    "10.20.0.0/16",  # Workloads Prod VPC
+    "10.0.0.0/16",  # Security VPC
+    "10.10.0.0/16", # Workloads Dev VPC
+    "10.20.0.0/16", # Workloads Prod VPC
   ]
 
   tags = {

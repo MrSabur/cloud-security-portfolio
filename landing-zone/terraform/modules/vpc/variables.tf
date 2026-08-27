@@ -65,7 +65,7 @@ variable "enable_flow_logs" {
 variable "flow_log_retention_days" {
   description = "Number of days to retain flow logs in CloudWatch"
   type        = number
-  default     = 365  # HIPAA requires minimum 6 years for some records; 365 is a baseline
+  default     = 365 # HIPAA requires minimum 6 years for some records; 365 is a baseline
 }
 
 variable "tags" {
